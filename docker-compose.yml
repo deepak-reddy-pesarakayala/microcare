@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+
+  # =====================
+  # MySQL 8 - Patient Database
+  # =====================
+  mysql:
+    image: mysql:8.0
+    container_name: microcare-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: microcare_patients
+      MYSQL_USER: microcare_user
+      MYSQL_PASSWORD: microcare_pass
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microcare-network
+
+  # =====================
+  # Redis - Caching
+  # =====================
+  redis:
+    image: redis:7-alpine
+    container_name: microcare-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microcare-network
+
+  # =====================
+  # RabbitMQ - Message Broker
+  # =====================
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: microcare-rabbitmq
+    restart: unless-stopped
+    ports:
+      # AMQP protocol port
+      - "5672:5672"
+      # Management UI
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: microcare
+      RABBITMQ_DEFAULT_PASS: microcare_pass
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - microcare-network
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  microcare-network:
+    driver: bridge

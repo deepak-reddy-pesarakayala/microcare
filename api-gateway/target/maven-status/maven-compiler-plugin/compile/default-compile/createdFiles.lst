@@ -1,0 +1,3 @@
+com\microcare\gateway\filter\LoggingFilter.class
+com\microcare\gateway\config\GatewayConfig.class
+com\microcare\gateway\ApiGatewayApplication.class
