@@ -3,6 +3,7 @@ D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\client\PatientServiceClient.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\client\PatientServiceFallbackFactory.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\config\FeignConfig.java
+D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\config\RabbitMQConfig.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\config\RedissonConfig.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\controller\AppointmentController.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\dto\AppointmentResponse.java
@@ -13,6 +14,7 @@ D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\dto\SlotResponse.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\entity\Appointment.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\entity\DoctorSlot.java
+D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\entity\OutboxEvent.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\enums\AppointmentStatus.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\enums\SlotStatus.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\exception\GlobalExceptionHandler.java
@@ -21,4 +23,6 @@ D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\exception\SlotNotAvailableException.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\repository\AppointmentRepository.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\repository\DoctorSlotRepository.java
+D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\repository\OutboxEventRepository.java
 D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\service\AppointmentService.java
+D:\Project\microcare\appointment-service\src\main\java\com\microcare\appointment\service\OutboxEventPublisher.java

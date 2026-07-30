@@ -18,6 +18,15 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: microcare
+    password: microcare_pass
+    virtual-host: /
+    listener:
+      simple:
+        prefetch: 1
 
 eureka:
   client:
@@ -39,3 +48,21 @@ logging:
   level:
     com.microcare.appointment: DEBUG
     org.redisson: INFO
+
+# =====================
+# Custom Application Config
+# =====================
+app:
+  rabbitmq:
+    exchange: appointment.exchange
+    dlx: appointment.dlx
+    queue:
+      billing-invoice: billing.invoice.queue
+    dlq:
+      billing-invoice: billing.invoice.dlq
+    routing-key:
+      appointment-confirmed: appointment.confirmed
+    max-retries: 3
+  outbox:
+    poller:
+      fixed-delay-ms: 5000

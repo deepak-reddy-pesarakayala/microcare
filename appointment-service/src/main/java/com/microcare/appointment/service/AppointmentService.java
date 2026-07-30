@@ -1,11 +1,15 @@
 package com.microcare.appointment.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microcare.appointment.client.PatientServiceClient;
 import com.microcare.appointment.dto.AppointmentResponse;
 import com.microcare.appointment.dto.BookingRequest;
 import com.microcare.appointment.dto.RescheduleRequest;
 import com.microcare.appointment.entity.Appointment;
 import com.microcare.appointment.entity.DoctorSlot;
+import com.microcare.appointment.entity.OutboxEvent;
 import com.microcare.appointment.enums.AppointmentStatus;
 import com.microcare.appointment.enums.SlotStatus;
 import com.microcare.appointment.exception.ResourceNotFoundException;
@@ -13,6 +17,7 @@ import com.microcare.appointment.exception.SlotBookingConflictException;
 import com.microcare.appointment.exception.SlotNotAvailableException;
 import com.microcare.appointment.repository.AppointmentRepository;
 import com.microcare.appointment.repository.DoctorSlotRepository;
+import com.microcare.appointment.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -24,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -40,12 +47,36 @@ public class AppointmentService {
     private final DoctorSlotRepository doctorSlotRepository;
     private final PatientServiceClient patientServiceClient;
     private final RedissonClient redissonClient;
+    private final OutboxEventRepository outboxEventRepository;
+
+    /**
+     * Shared ObjectMapper for creating outbox event payloads.
+     * Registered with JavaTimeModule for proper LocalDateTime serialization.
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     /**
      * Books an appointment with distributed locking and optimistic concurrency control.
      * Validates patient exists via Feign client, acquires Redisson lock on slotId,
      * checks slot availability, marks slot as BOOKED (with @Version check),
      * and retries up to 3 times on OptimisticLockException.
+     */
+    /**
+     * Books an appointment and writes an OutboxEvent in the SAME transaction.
+     *
+     * WHY THIS ELIMINATES THE DUAL-WRITE PROBLEM:
+     * --------------------------------------------
+     * The appointment status update AND the outbox event insert happen within
+     * the same @Transactional boundary. If the transaction succeeds, both are
+     * committed atomically. If it fails, both are rolled back. This guarantees
+     * that we never have a confirmed appointment without a corresponding outbox
+     * event (or vice versa).
+     *
+     * The outbox event is then picked up asynchronously by OutboxEventPublisher
+     * (a @Scheduled poller) and published to RabbitMQ. This decouples the
+     * transaction commit from the message broker, eliminating the dual-write
+     * problem entirely.
      */
     @Transactional
     public AppointmentResponse bookAppointment(BookingRequest request) {
@@ -75,6 +106,10 @@ public class AppointmentService {
             Appointment saved = appointmentRepository.save(appointment);
             log.info("Appointment successfully booked: id={}, slotId={}, patientId={}",
                     saved.getId(), saved.getSlotId(), saved.getPatientId());
+
+            // ---- TRANSACTIONAL OUTBOX: write event in the SAME transaction ----
+            writeOutboxEvent(saved);
+
             return mapToResponse(saved);
         });
     }
@@ -254,6 +289,46 @@ public class AppointmentService {
                 .status(appointment.getStatus())
                 .createdAt(appointment.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Writes an OutboxEvent for the given appointment in the CURRENT transaction.
+     *
+     * The payload contains the minimum data needed by the billing-service to create an invoice:
+     * appointmentId, patientId, and a default amount (can be customized later).
+     *
+     * A UUID messageId is generated for idempotent consumption downstream.
+     */
+    private void writeOutboxEvent(Appointment appointment) {
+        try {
+            Map<String, Object> payload = Map.of(
+                    "appointmentId", appointment.getId(),
+                    "patientId", appointment.getPatientId(),
+                    "doctorId", appointment.getDoctorId(),
+                    "amount", 100.00, // Default consultation fee — can be dynamic in future
+                    "currency", "USD",
+                    "appointmentDate", appointment.getCreatedAt().toString()
+            );
+
+            String payloadJson = MAPPER.writeValueAsString(payload);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .messageId(UUID.randomUUID().toString())
+                    .aggregateType("appointment")
+                    .aggregateId(appointment.getId())
+                    .eventType("APPOINTMENT_CONFIRMED")
+                    .payload(payloadJson)
+                    .status(OutboxEvent.OutboxStatus.PENDING)
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+            log.debug("Outbox event written: aggregateType=appointment, aggregateId={}, eventType=APPOINTMENT_CONFIRMED",
+                    appointment.getId());
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize outbox event payload for appointment {}: {}",
+                    appointment.getId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to serialize outbox event payload", e);
+        }
     }
 
     @FunctionalInterface

@@ -10,13 +10,9 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>appointment-service</artifactId>
-    <name>MicroCare - Appointment Service</name>
-    <description>Appointment scheduling microservice with distributed locking and optimistic concurrency</description>
-
-    <properties>
-        <redisson.version>3.37.0</redisson.version>
-    </properties>
+    <artifactId>billing-service</artifactId>
+    <name>MicroCare - Billing Service</name>
+    <description>Billing &amp; Invoice microservice with Transactional Outbox consumer</description>
 
     <dependencies>
         <!-- Spring Boot Web -->
@@ -37,6 +33,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Spring Boot AMQP (RabbitMQ) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- MySQL Driver -->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -50,26 +52,7 @@
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
-        <!-- OpenFeign -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
-        </dependency>
-
-        <!-- Redisson - Distributed Locking -->
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>${redisson.version}</version>
-        </dependency>
-
-        <!-- Spring Boot AMQP (RabbitMQ) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
-        </dependency>
-
-        <!-- Jackson for JSON serialization -->
+        <!-- Jackson for JSON (brought by spring-boot-starter-web, but explicitly declared for clarity) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
