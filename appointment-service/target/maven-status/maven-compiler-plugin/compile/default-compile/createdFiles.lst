@@ -2,6 +2,7 @@ com\microcare\appointment\client\PatientServiceFallbackFactory$1.class
 com\microcare\appointment\service\AppointmentService.class
 com\microcare\appointment\client\PatientServiceClient.class
 com\microcare\appointment\entity\Appointment$AppointmentBuilder.class
+com\microcare\appointment\entity\OutboxEvent.class
 com\microcare\appointment\dto\AppointmentResponse$AppointmentResponseBuilder.class
 com\microcare\appointment\exception\SlotNotAvailableException.class
 com\microcare\appointment\dto\SlotResponse$SlotResponseBuilder.class
@@ -19,6 +20,9 @@ com\microcare\appointment\service\AppointmentService$LockedOperation.class
 com\microcare\appointment\controller\AppointmentController.class
 com\microcare\appointment\enums\AppointmentStatus.class
 com\microcare\appointment\dto\AppointmentResponse.class
+com\microcare\appointment\repository\OutboxEventRepository.class
+com\microcare\appointment\entity\OutboxEvent$OutboxEventBuilder.class
+com\microcare\appointment\config\RabbitMQConfig.class
 com\microcare\appointment\dto\ErrorResponse$ValidationError$ValidationErrorBuilder.class
 com\microcare\appointment\exception\ResourceNotFoundException.class
 com\microcare\appointment\dto\ErrorResponse$ValidationError.class
@@ -34,4 +38,6 @@ com\microcare\appointment\entity\Appointment.class
 com\microcare\appointment\entity\DoctorSlot.class
 com\microcare\appointment\dto\ErrorResponse$ErrorResponseBuilder.class
 com\microcare\appointment\dto\PatientResponse$PatientResponseBuilder.class
+com\microcare\appointment\service\OutboxEventPublisher.class
+com\microcare\appointment\entity\OutboxEvent$OutboxStatus.class
 com\microcare\appointment\dto\SlotResponse.class

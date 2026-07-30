@@ -17,6 +17,7 @@
         <module>api-gateway</module>
         <module>patient-service</module>
         <module>appointment-service</module>
+        <module>billing-service</module>
     </modules>
 
     <properties>

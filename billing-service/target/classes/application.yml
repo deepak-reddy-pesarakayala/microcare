@@ -1,11 +1,11 @@
 server:
-  port: 8082
+  port: 8083
 
 spring:
   application:
-    name: appointment-service
+    name: billing-service
   datasource:
-    url: jdbc:mysql://localhost:3306/microcare_appointments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/microcare_billing?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: rootpassword
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -46,8 +46,7 @@ management:
 
 logging:
   level:
-    com.microcare.appointment: DEBUG
-    org.redisson: INFO
+    com.microcare.billing: DEBUG
 
 # =====================
 # Custom Application Config
@@ -63,6 +62,3 @@ app:
     routing-key:
       appointment-confirmed: appointment.confirmed
     max-retries: 3
-  outbox:
-    poller:
-      fixed-delay-ms: 5000
