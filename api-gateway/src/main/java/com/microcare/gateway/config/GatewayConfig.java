@@ -14,6 +14,9 @@ public class GatewayConfig {
                 .route("patient-service", r -> r
                         .path("/api/patients/**")
                         .uri("lb://patient-service"))
+                .route("appointment-service", r -> r
+                        .path("/api/appointments/**")
+                        .uri("lb://appointment-service"))
                 .build();
     }
 }
