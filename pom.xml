@@ -16,6 +16,7 @@
         <module>discovery-service</module>
         <module>api-gateway</module>
         <module>patient-service</module>
+        <module>appointment-service</module>
     </modules>
 
     <properties>
