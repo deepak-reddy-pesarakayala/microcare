@@ -1,0 +1,3 @@
+com\microcare\common\CorrelationId.class
+com\microcare\common\config\CorrelationIdConfig.class
+com\microcare\common\web\CorrelationIdFilter.class

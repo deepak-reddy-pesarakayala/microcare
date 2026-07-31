@@ -2,6 +2,7 @@ package com.microcare.billing.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microcare.common.CorrelationId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -57,6 +58,11 @@ public class InvoiceEventListener {
      */
     @RabbitListener(queues = "${app.rabbitmq.queue.billing-invoice:billing.invoice.queue}")
     public void handleAppointmentConfirmed(Message message) {
+        // The consumer thread has no HTTP request context — restore the trace id
+        // that the outbox publisher stamped on the message headers.
+        Object correlationId = message.getMessageProperties().getHeaders().get(CorrelationId.HEADER);
+        CorrelationId.set(correlationId != null ? correlationId.toString() : null);
+
         String messageId = message.getMessageProperties().getMessageId();
         log.info("Received appointment confirmed event, messageId={}", messageId);
 
@@ -85,6 +91,8 @@ public class InvoiceEventListener {
                     messageId, e.getMessage(), e);
             // Re-throw to trigger retry interceptor → DLQ after max retries
             throw new RuntimeException("Failed to process appointment confirmed event", e);
+        } finally {
+            CorrelationId.clear();
         }
     }
 }

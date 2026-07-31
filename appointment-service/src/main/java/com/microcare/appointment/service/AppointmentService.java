@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microcare.appointment.client.PatientServiceClient;
+import com.microcare.common.CorrelationId;
 import com.microcare.appointment.dto.AppointmentResponse;
 import com.microcare.appointment.dto.BookingRequest;
 import com.microcare.appointment.dto.RescheduleRequest;
@@ -319,6 +320,7 @@ public class AppointmentService {
                     .eventType("APPOINTMENT_CONFIRMED")
                     .payload(payloadJson)
                     .status(OutboxEvent.OutboxStatus.PENDING)
+                    .correlationId(CorrelationId.get())
                     .build();
 
             outboxEventRepository.save(outboxEvent);

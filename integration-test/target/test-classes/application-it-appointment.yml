@@ -1,0 +1,61 @@
+# Integration-test profile for appointment-service.
+server:
+  port: 18082
+
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url: jdbc:mysql://${IT_MYSQL_HOST:localhost}:${IT_MYSQL_PORT:3306}/microcare_appointments?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${IT_REDIS_HOST:localhost}
+      port: ${IT_REDIS_PORT:6379}
+  redis:
+    host: ${IT_REDIS_HOST:localhost}
+    port: ${IT_REDIS_PORT:6379}
+  rabbitmq:
+    host: ${IT_RABBIT_HOST:localhost}
+    port: ${IT_RABBIT_PORT:5672}
+    username: microcare
+    password: microcare_pass
+    virtual-host: /
+    listener:
+      simple:
+        prefetch: 1
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    prefer-ip-address: true
+
+spring.cloud.discovery.enabled: false
+
+app:
+  rabbitmq:
+    exchange: appointment.exchange
+    dlx: appointment.dlx
+    queue:
+      billing-invoice: billing.invoice.queue
+    dlq:
+      billing-invoice: billing.invoice.dlq
+    routing-key:
+      appointment-confirmed: appointment.confirmed
+    max-retries: 3
+  outbox:
+    poller:
+      fixed-delay-ms: 2000
+  patient-service:
+    # Bypass service discovery inside the test — call the booted patient context directly.
+    url: http://localhost:18081
+
+logging:
+  level:
+    com.microcare.appointment: INFO
+    org.redisson: WARN

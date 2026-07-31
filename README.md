@@ -33,11 +33,14 @@ A cloud-native, microservices-based Hospital Management Platform built with **Sp
 | RabbitMQ  | `5672` / `15672`  | Async messaging / Mgmt |
 
 ### Platform Services (Spring Boot)
-| Service            | Port  | Tech Stack                    |
-|--------------------|-------|-------------------------------|
-| discovery-service  | 8761  | Eureka Server                 |
-| api-gateway        | 8080  | Spring Cloud Gateway          |
-| patient-service    | 8081  | Spring Web, JPA, MySQL        |
+| Service              | Port  | Tech Stack                                       |
+|----------------------|-------|--------------------------------------------------|
+| discovery-service    | 8761  | Eureka Server                                    |
+| api-gateway          | 8080  | Spring Cloud Gateway, Spring Security + JWT, Redis rate limiting |
+| patient-service      | 8081  | Spring Web, JPA, MySQL                           |
+| appointment-service  | 8082  | Spring Web, JPA, Redisson, RabbitMQ (outbox)     |
+| billing-service      | 8083  | Spring Web, JPA, RabbitMQ (consumer)             |
+| notification-service | 8084  | Spring Web, JPA, RabbitMQ (consumer)             |
 
 ---
 
@@ -51,57 +54,82 @@ A cloud-native, microservices-based Hospital Management Platform built with **Sp
 
 ## Quick Start
 
-### 1. Start Infrastructure (MySQL, Redis, RabbitMQ)
+### 1. Build & start everything (infrastructure + all services)
 
 ```bash
-docker compose up -d
+docker compose up --build
 ```
 
-Verify all services are healthy:
+Services start in dependency order via healthcheck-based `depends_on`.
+Verify everything is healthy:
 ```bash
 docker compose ps
 ```
 
-### 2. Build all modules
+### 2. Run locally (services on the host, infra in Docker)
 
 ```bash
+# Infrastructure only
+docker compose up -d mysql redis rabbitmq
+
+# Build all modules
 mvn clean package -DskipTests
+
+# Start services in separate terminals (Eureka first, gateway next)
+cd discovery-service && mvn spring-boot:run
+cd api-gateway && mvn spring-boot:run
+cd patient-service && mvn spring-boot:run
+cd appointment-service && mvn spring-boot:run
+cd billing-service && mvn spring-boot:run
+cd notification-service && mvn spring-boot:run
 ```
 
-### 3. Start Services (in separate terminals)
+> **Tip:** Runnable jars use the `-exec` classifier, e.g.
+> `java -jar api-gateway/target/api-gateway-1.0.0-exec.jar`
 
-**Terminal 1** — Discovery Service (Eureka):
-```bash
-cd discovery-service
-mvn spring-boot:run
-```
+### 3. Seeded users
 
-**Terminal 2** — API Gateway:
-```bash
-cd api-gateway
-mvn spring-boot:run
-```
+The auth database is seeded via `init-scripts/01-create-auth-db.sql`:
 
-**Terminal 3** — Patient Service:
-```bash
-cd patient-service
-mvn spring-boot:run
-```
+| Username | Password   | Role   | Notes                          |
+|----------|------------|--------|--------------------------------|
+| `admin`  | `password` | ADMIN  | full access                    |
+| `doctor` | `password` | DOCTOR | doctor_id = 100                |
 
-> **Tip:** You can also run each service directly:
-> ```bash
-> java -jar discovery-service/target/discovery-service-1.0.0.jar
-> java -jar api-gateway/target/api-gateway-1.0.0.jar
-> java -jar patient-service/target/patient-service-1.0.0.jar
-> ```
+> ⚠️ Change the seeded passwords and `JWT_SECRET` before any real deployment.
 
 ---
+
+## Security Model
+
+* **Login** — `POST /auth/login` validates against the `users` table (BCrypt) and returns a signed **JWT** with `role`, `uid`, `pid`/`did` claims.
+* **Self-registration** — `POST /auth/register` creates a PATIENT-role account linked to an existing patient record.
+* **Request validation** — a global `JwtAuthGlobalFilter` validates the JWT signature/expiry on every request except `/auth/**` and `/actuator/**`:
+  * Missing/invalid/expired token → `401`
+  * Appointment **writes** (`POST/PUT/DELETE /api/appointments/**`) → `ADMIN` or `DOCTOR` only, else `403`
+  * PATIENT-role users may only access **their own** record (`GET/PUT /api/patients/{id}` matching the `pid` claim), else `403`
+* **Rate limiting** — Redis-backed `RequestRateLimiter`/`RedisRateLimiter` on every route, keyed by client IP (custom `KeyResolver`). Over-limit requests → `429`. Tune via `RATE_LIMIT_REPLENISH_RATE` / `RATE_LIMIT_BURST_CAPACITY`.
+* **Correlation IDs** — the gateway generates `X-Correlation-Id`, propagates it to downstream services (HTTP + Feign headers) and into RabbitMQ message headers (via the outbox), and includes it in every log line through the MDC.
+* **Audit log** — every authenticated request is recorded in the `audit_logs` table (user, role, method, path, status, correlation id, IP).
+
+### Authentication
+
+```bash
+# Login (ADMIN)
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "password"}'
+
+# Use the returned token on all other endpoints
+curl http://localhost:8080/api/patients/1 \
+  -H "Authorization: Bearer <token>"
+```
 
 ## API Endpoints
 
 ### Patient Service (via API Gateway)
 
-All patient requests go through the **API Gateway** at `http://localhost:8080`.
+All patient requests go through the **API Gateway** at `http://localhost:8080` and **require a JWT** (`Authorization: Bearer <token>`).
 
 #### Create a Patient
 ```bash
@@ -212,43 +240,28 @@ Example error response:
 ```
 microcare/
 ├── pom.xml                          # Root Maven POM (multi-module)
-├── docker-compose.yml               # Infrastructure services
+├── docker-compose.yml               # Infrastructure + all platform services
+├── init-scripts/                    # MySQL first-boot scripts (auth/users, databases)
 ├── README.md
 ├── discovery-service/               # Eureka Service Registry
-│   ├── pom.xml
-│   └── src/main/java/com/microcare/discovery/
-│       ├── DiscoveryServiceApplication.java
-│       └── resources/
-│           └── application.yml
-├── api-gateway/                     # Spring Cloud Gateway
-│   ├── pom.xml
-│   └── src/main/java/com/microcare/gateway/
-│       ├── ApiGatewayApplication.java
-│       ├── config/
-│       │   └── GatewayConfig.java
-│       ├── filter/
-│       │   └── LoggingFilter.java
-│       └── resources/
-│           └── application.yml
-└── patient-service/                 # Patient REST API
-    ├── pom.xml
-    └── src/main/java/com/microcare/patient/
-        ├── PatientServiceApplication.java
-        ├── controller/
-        │   └── PatientController.java
-        ├── service/
-        │   └── PatientService.java
-        ├── repository/
-        │   └── PatientRepository.java
-        ├── entity/
-        │   └── Patient.java
-        ├── dto/
-        │   ├── PatientRequest.java
-        │   ├── PatientResponse.java
-        │   └── ErrorResponse.java
-        └── exception/
-            ├── ResourceNotFoundException.java
-            └── GlobalExceptionHandler.java
+├── common-support/                  # Shared correlation-ID utilities
+├── api-gateway/                     # Spring Cloud Gateway + Spring Security/JWT + rate limiting
+├── patient-service/                 # Patient REST API
+├── appointment-service/             # Appointment booking (Redisson lock + outbox)
+├── billing-service/                 # Invoice creation (RabbitMQ consumer)
+├── notification-service/            # Notification log entries (RabbitMQ consumer)
+└── integration-test/                # Testcontainers full-system test (mvn verify)
+```
+
+## Running the System Integration Test
+
+Requires Docker Desktop (started before running). The test boots every service
+against Testcontainers MySQL/Redis/RabbitMQ and verifies the full flow:
+register patient → login → security rules → doctor books appointment → invoice
+via outbox → notification log → audit log — all within a timeout.
+
+```bash
+mvn verify -pl integration-test
 ```
 
 ---
@@ -262,6 +275,19 @@ docker compose down
 # Stop Docker containers and remove volumes (⚠️ destroys data)
 docker compose down -v
 ```
+
+## Remaining Gaps / TODOs (before frontend development)
+
+1. **Role-scoped data access** — enforce *row-level* authorization inside services (not just the gateway): patients should only see their own appointments/invoices, doctors only their own slots/schedule.
+2. **JWT secret management** — move `JWT_SECRET` to a secrets manager / vault; add token refresh flow and logout/revocation (e.g., Redis denylist).
+3. **HTTPS/TLS termination** and `X-Forwarded-For` trust config at the edge for real deployments.
+4. **Doctor slot management** — there is no endpoint to create/manage `doctor_slots` yet (test seeds them directly via SQL).
+5. **Notification delivery** — the notification-service only *logs* entries; add actual email/SMS dispatch (e.g., Spring Mail, SendGrid).
+6. **Password policy & account lifecycle** — lockouts, password reset, admin user management UI/API.
+7. **Audit log retention/purging** and a query/export endpoint for compliance.
+8. **Metrics & dashboards** — Prometheus/Grafana on actuator metrics; distributed tracing (Micrometer Tracing + Zipkin) instead of correlation-ID-only.
+9. **Test coverage** — add unit tests for the new gateway filters (JWT auth, rate limiting) and notification service.
+10. **CI pipeline** — build, run `mvn verify` (including the system IT), and image scanning.
 
 ## License
 

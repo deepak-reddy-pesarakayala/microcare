@@ -1,5 +1,6 @@
 com\microcare\appointment\client\PatientServiceFallbackFactory$1.class
 com\microcare\appointment\service\AppointmentService.class
+com\microcare\appointment\client\CorrelationIdFeignInterceptor.class
 com\microcare\appointment\client\PatientServiceClient.class
 com\microcare\appointment\entity\Appointment$AppointmentBuilder.class
 com\microcare\appointment\entity\OutboxEvent.class
