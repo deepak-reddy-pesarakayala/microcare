@@ -1,5 +1,6 @@
 package com.microcare.gateway.filter;
 
+import com.microcare.common.CorrelationId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -24,9 +25,10 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         String method = request.getMethod() != null ? request.getMethod().name() : "UNKNOWN";
         String path = uri.getPath();
         String query = uri.getQuery();
+        String correlationId = CorrelationId.get();
 
-        log.info("Incoming Request: {} {}, queryParams={}", method, path,
-                query != null ? query : "none");
+        log.info("Incoming Request: {} {}, queryParams={}, correlationId={}",
+                method, path, query != null ? query : "none", correlationId);
 
         return chain.filter(exchange).then(Mono.fromRunnable(() ->
                 log.info("Completed Response: {} {} -> Status: {}",

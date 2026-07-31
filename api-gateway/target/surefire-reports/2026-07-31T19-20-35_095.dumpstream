@@ -1,0 +1,5 @@
+# Created at 2026-07-31T19:20:52.822
+Boot Manifest-JAR contains absolute paths in classpath 'D:\Project\microcare\api-gateway\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

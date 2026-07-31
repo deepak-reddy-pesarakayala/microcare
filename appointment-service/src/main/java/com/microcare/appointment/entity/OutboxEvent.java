@@ -97,6 +97,14 @@ public class OutboxEvent {
     @Builder.Default
     private int retryCount = 0;
 
+    /**
+     * Trace id captured from the HTTP request that created the event, forwarded
+     * onto the RabbitMQ message so downstream consumers can correlate the whole
+     * flow end-to-end.
+     */
+    @Column(name = "correlation_id", length = 64)
+    private String correlationId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

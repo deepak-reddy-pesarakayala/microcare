@@ -1,25 +1,12 @@
 package com.microcare.gateway.config;
 
-import org.springframework.cloud.gateway.route.RouteLocator;
-import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+/**
+ * Route definitions moved to {@code application.yml} ({@code spring.cloud.gateway.routes})
+ * so they can be overridden per-environment (e.g. the integration-test module
+ * points the gateway at fixed local ports instead of {@code lb://} URIs).
+ */
+public final class GatewayConfig {
 
-@Configuration
-public class GatewayConfig {
-
-    @Bean
-    public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
-        return builder.routes()
-                .route("patient-service", r -> r
-                        .path("/api/patients/**")
-                        .uri("lb://patient-service"))
-                .route("appointment-service", r -> r
-                        .path("/api/appointments/**")
-                        .uri("lb://appointment-service"))
-                .route("billing-service", r -> r
-                        .path("/api/invoices/**")
-                        .uri("lb://billing-service"))
-                .build();
+    private GatewayConfig() {
     }
 }

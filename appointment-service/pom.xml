@@ -19,6 +19,13 @@
     </properties>
 
     <dependencies>
+        <!-- Shared cross-cutting utilities (correlation ID) -->
+        <dependency>
+            <groupId>com.microcare</groupId>
+            <artifactId>common-support</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -119,6 +126,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <classifier>exec</classifier>
                 </configuration>
             </plugin>
         </plugins>

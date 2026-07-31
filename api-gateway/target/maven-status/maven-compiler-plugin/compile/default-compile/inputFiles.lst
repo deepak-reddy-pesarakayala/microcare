@@ -1,3 +1,15 @@
 D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\ApiGatewayApplication.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\audit\AuditLogService.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\auth\AuthController.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\auth\AuthService.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\auth\dto\LoginRequest.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\auth\dto\LoginResponse.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\auth\dto\RegisterRequest.java
 D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\config\GatewayConfig.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\config\GatewaySecurityConfig.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\config\RateLimitConfig.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\filter\AuditGlobalFilter.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\filter\CorrelationIdGlobalFilter.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\filter\JwtAuthGlobalFilter.java
 D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\filter\LoggingFilter.java
+D:\Project\microcare\api-gateway\src\main\java\com\microcare\gateway\security\JwtService.java

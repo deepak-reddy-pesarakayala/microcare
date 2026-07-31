@@ -2,6 +2,7 @@ package com.microcare.appointment.service;
 
 import com.microcare.appointment.entity.OutboxEvent;
 import com.microcare.appointment.repository.OutboxEventRepository;
+import com.microcare.common.CorrelationId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -89,24 +90,33 @@ public class OutboxEventPublisher {
     }
 
     /**
-     * Publishes a single outbox event to RabbitMQ with idempotency headers.
+     * Publishes a single outbox event to RabbitMQ with idempotency and trace headers.
      */
     private void publishEvent(OutboxEvent event) {
         String routingKey = resolveRoutingKey(event.getEventType());
 
-        Message message = MessageBuilder
-                .withBody(event.getPayload().getBytes(StandardCharsets.UTF_8))
-                .setContentType(MessageProperties.CONTENT_TYPE_JSON)
-                .setMessageId(event.getMessageId())
-                .setHeader("eventType", event.getEventType())
-                .setHeader("aggregateType", event.getAggregateType())
-                .setHeader("aggregateId", String.valueOf(event.getAggregateId()))
-                .build();
+        // The poller runs on a scheduled thread, so the MDC has no request context;
+        // restore the correlation id captured at event-write time for traceable logs.
+        CorrelationId.set(event.getCorrelationId());
 
-        rabbitTemplate.send(exchangeName, routingKey, message);
+        try {
+            Message message = MessageBuilder
+                    .withBody(event.getPayload().getBytes(StandardCharsets.UTF_8))
+                    .setContentType(MessageProperties.CONTENT_TYPE_JSON)
+                    .setMessageId(event.getMessageId())
+                    .setHeader("eventType", event.getEventType())
+                    .setHeader("aggregateType", event.getAggregateType())
+                    .setHeader("aggregateId", String.valueOf(event.getAggregateId()))
+                    .setHeader(CorrelationId.HEADER, event.getCorrelationId())
+                    .build();
 
-        log.debug("Sent message to exchange={}, routingKey={}, messageId={}",
-                exchangeName, routingKey, event.getMessageId());
+            rabbitTemplate.send(exchangeName, routingKey, message);
+
+            log.debug("Sent message to exchange={}, routingKey={}, messageId={}",
+                    exchangeName, routingKey, event.getMessageId());
+        } finally {
+            CorrelationId.clear();
+        }
     }
 
     /**

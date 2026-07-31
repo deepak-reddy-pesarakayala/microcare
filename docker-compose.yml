@@ -1,10 +1,11 @@
-version: "3.8"
+name: microcare
 
 services:
 
   # =====================
-  # MySQL 8 - Patient & Appointment Databases
+  # Infrastructure
   # =====================
+
   mysql:
     image: mysql:8.0
     container_name: microcare-mysql
@@ -23,13 +24,11 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     networks:
       - microcare-network
 
-  # =====================
-  # Redis - Caching
-  # =====================
   redis:
     image: redis:7-alpine
     container_name: microcare-redis
@@ -46,17 +45,12 @@ services:
     networks:
       - microcare-network
 
-  # =====================
-  # RabbitMQ - Message Broker
-  # =====================
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: microcare-rabbitmq
     restart: unless-stopped
     ports:
-      # AMQP protocol port
       - "5672:5672"
-      # Management UI
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: microcare
@@ -69,6 +63,168 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 20s
+    networks:
+      - microcare-network
+
+  # =====================
+  # Platform services
+  # =====================
+
+  discovery-service:
+    build: ./discovery-service
+    container_name: microcare-discovery
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8761"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - microcare-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: microcare-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: rootpassword
+      REDIS_HOST: redis
+      EUREKA_HOST: discovery-service
+      JWT_SECRET: ${JWT_SECRET:-microcare-dev-secret-key-change-me-in-production-0123456789}
+      PATIENT_SERVICE_URL: http://patient-service:8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - microcare-network
+
+  patient-service:
+    build: ./patient-service
+    container_name: microcare-patient-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: rootpassword
+      EUREKA_HOST: discovery-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - microcare-network
+
+  appointment-service:
+    build: ./appointment-service
+    container_name: microcare-appointment-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: rootpassword
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      EUREKA_HOST: discovery-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8082"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - microcare-network
+
+  billing-service:
+    build: ./billing-service
+    container_name: microcare-billing-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: rootpassword
+      RABBITMQ_HOST: rabbitmq
+      EUREKA_HOST: discovery-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8083"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - microcare-network
+
+  notification-service:
+    build: ./notification-service
+    container_name: microcare-notification-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: rootpassword
+      RABBITMQ_HOST: rabbitmq
+      EUREKA_HOST: discovery-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8084"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     networks:
       - microcare-network
 
