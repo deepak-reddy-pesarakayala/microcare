@@ -1,0 +1,8 @@
+com\microcare\notification\config\RabbitMQConfig.class
+com\microcare\notification\entity\NotificationLog$NotificationLogBuilder.class
+com\microcare\notification\entity\NotificationLog$Channel.class
+com\microcare\notification\NotificationServiceApplication.class
+com\microcare\notification\entity\NotificationLog.class
+com\microcare\notification\repository\NotificationLogRepository.class
+com\microcare\notification\service\NotificationEventListener.class
+com\microcare\notification\service\NotificationEventListener$1.class

@@ -1,0 +1,47 @@
+# Integration-test profile for notification-service.
+server:
+  port: 18084
+
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url: jdbc:mysql://${IT_MYSQL_HOST:localhost}:${IT_MYSQL_PORT:3306}/microcare_notifications?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  rabbitmq:
+    host: ${IT_RABBIT_HOST:localhost}
+    port: ${IT_RABBIT_PORT:5672}
+    username: microcare
+    password: microcare_pass
+    virtual-host: /
+    listener:
+      simple:
+        prefetch: 1
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    prefer-ip-address: true
+
+spring.cloud.discovery.enabled: false
+
+app:
+  rabbitmq:
+    exchange: appointment.exchange
+    dlx: appointment.dlx
+    queue:
+      notification: notification.queue
+    dlq:
+      notification: notification.dlq
+    routing-key:
+      appointment-confirmed: appointment.confirmed
+    max-retries: 3
+
+logging:
+  level:
+    com.microcare.notification: INFO

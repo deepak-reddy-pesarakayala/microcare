@@ -1,0 +1,16 @@
+com\microcare\patient\exception\ResourceNotFoundException.class
+com\microcare\patient\dto\ErrorResponse$ValidationError$ValidationErrorBuilder.class
+com\microcare\patient\service\PatientService.class
+com\microcare\patient\entity\Patient.class
+com\microcare\patient\exception\GlobalExceptionHandler.class
+com\microcare\patient\dto\ErrorResponse$ErrorResponseBuilder.class
+com\microcare\patient\PatientServiceApplication.class
+com\microcare\patient\dto\PatientResponse.class
+com\microcare\patient\dto\ErrorResponse$ValidationError.class
+com\microcare\patient\repository\PatientRepository.class
+com\microcare\patient\dto\ErrorResponse.class
+com\microcare\patient\entity\Patient$PatientBuilder.class
+com\microcare\patient\dto\PatientResponse$PatientResponseBuilder.class
+com\microcare\patient\dto\PatientRequest$PatientRequestBuilder.class
+com\microcare\patient\controller\PatientController.class
+com\microcare\patient\dto\PatientRequest.class

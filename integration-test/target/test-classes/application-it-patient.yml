@@ -1,0 +1,26 @@
+# Integration-test profile for patient-service.
+server:
+  port: 18081
+
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url: jdbc:mysql://${IT_MYSQL_HOST:localhost}:${IT_MYSQL_PORT:3306}/microcare_patients?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    prefer-ip-address: true
+
+spring.cloud.discovery.enabled: false
+
+logging:
+  level:
+    com.microcare.patient: INFO

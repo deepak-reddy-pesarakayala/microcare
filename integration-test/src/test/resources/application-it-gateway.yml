@@ -1,0 +1,54 @@
+# Integration-test profile for api-gateway.
+# Applied via --spring.profiles.active=it-gateway when the system test boots the gateway.
+server:
+  port: 18080
+
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url: jdbc:mysql://${IT_MYSQL_HOST:localhost}:${IT_MYSQL_PORT:3306}/microcare_auth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${IT_REDIS_HOST:localhost}
+      port: ${IT_REDIS_PORT:6379}
+  cloud:
+    gateway:
+      routes:
+        - id: patient-service
+          uri: http://localhost:18081
+          predicates:
+            - Path=/api/patients/**
+        - id: appointment-service
+          uri: http://localhost:18082
+          predicates:
+            - Path=/api/appointments/**
+        - id: billing-service
+          uri: http://localhost:18083
+          predicates:
+            - Path=/api/invoices/**
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    prefer-ip-address: true
+
+spring.cloud.discovery.enabled: false
+spring.cloud.gateway.discovery.locator.enabled: false
+
+logging:
+  level:
+    com.microcare.gateway: INFO
+
+app:
+  jwt:
+    secret: microcare-it-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
+    expiration-ms: 86400000
+  patient-service:
+    base-url: http://localhost:18081
