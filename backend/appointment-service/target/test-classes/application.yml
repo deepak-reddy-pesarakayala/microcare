@@ -1,0 +1,40 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: appointment-service-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+  redis:
+    host: localhost
+    port: 6379
+
+app:
+  outbox:
+    poller:
+      # Unit tests run without RabbitMQ credentials, so every poll would fail to
+      # publish PENDING events and flood the logs (blocking the JVM via stdout
+      # backpressure). A huge delay keeps the scheduler inert for the test run:
+      # the first poll fires at startup while the outbox table is still empty.
+      fixed-delay-ms: 86400000
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    com.microcare.appointment: DEBUG
+    org.redisson: WARN
