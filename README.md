@@ -76,12 +76,12 @@ docker compose up -d mysql redis rabbitmq
 mvn clean package -DskipTests
 
 # Start services in separate terminals (Eureka first, gateway next)
-cd discovery-service && mvn spring-boot:run
-cd api-gateway && mvn spring-boot:run
-cd patient-service && mvn spring-boot:run
-cd appointment-service && mvn spring-boot:run
-cd billing-service && mvn spring-boot:run
-cd notification-service && mvn spring-boot:run
+cd backend/discovery-service && mvn spring-boot:run
+cd backend/api-gateway && mvn spring-boot:run
+cd backend/patient-service && mvn spring-boot:run
+cd backend/appointment-service && mvn spring-boot:run
+cd backend/billing-service && mvn spring-boot:run
+cd backend/notification-service && mvn spring-boot:run
 ```
 
 > **Tip:** Runnable jars use the `-exec` classifier, e.g.
@@ -91,22 +91,46 @@ cd notification-service && mvn spring-boot:run
 
 The auth database is seeded via `init-scripts/01-create-auth-db.sql`:
 
-| Username | Password   | Role   | Notes                          |
-|----------|------------|--------|--------------------------------|
-| `admin`  | `password` | ADMIN  | full access                    |
-| `doctor` | `password` | DOCTOR | doctor_id = 100                |
+| Username    | Password   | Role   | Status   | Notes                                   |
+|-------------|------------|--------|----------|-----------------------------------------|
+| `admin`     | `password` | ADMIN  | APPROVED | full access                             |
+| `doctor`    | `password` | DOCTOR | APPROVED | doctor_id = 100                         |
+| `dr.olivia` | `password` | DOCTOR | PENDING  | demo of a doctor awaiting admin approval |
 
 > ⚠️ Change the seeded passwords and `JWT_SECRET` before any real deployment.
+>
+> ℹ️ The new `users` columns (`status`, `full_name`, `email`, …) are applied by the init
+> scripts on a **fresh** database. If you have an existing MySQL volume from before this
+> change, reset it with `docker compose down -v` before starting.
+
+---
+
+## Doctor onboarding & admin approval
+
+Doctors self-register via **`POST /auth/register-doctor`** (public). New accounts are
+created with `status = PENDING` and **cannot sign in** until an administrator approves them:
+
+| Step | Who      | What                                                        |
+|------|----------|-------------------------------------------------------------|
+| 1    | Doctor   | `POST /auth/register-doctor` (username, password, fullName, email, specialization, licenseNumber) |
+| 2    | Admin    | `GET /api/admin/doctors` lists all doctor accounts          |
+| 3    | Admin    | `POST /api/admin/doctors/{id}/approve` — activates the account and assigns its `doctor_id` (the user's own PK) |
+| 4    | Admin    | `POST /api/admin/doctors/{id}/reject` — blocks the account permanently |
+| 5    | Doctor   | Signs in normally once approved (`PENDING`/`REJECTED` doctors get `403` at login) |
+
+Admin endpoints are enforced at the gateway: any request to `/api/admin/**` with a
+non-ADMIN role is rejected with `403`.
 
 ---
 
 ## Security Model
 
-* **Login** — `POST /auth/login` validates against the `users` table (BCrypt) and returns a signed **JWT** with `role`, `uid`, `pid`/`did` claims.
-* **Self-registration** — `POST /auth/register` creates a PATIENT-role account linked to an existing patient record.
+* **Login** — `POST /auth/login` validates against the `users` table (BCrypt) and returns a signed **JWT** with `role`, `uid`, `pid`/`did` claims. DOCTOR accounts with a `PENDING`/`REJECTED` status are blocked with `403`.
+* **Self-registration** — `POST /auth/register` creates a PATIENT-role account *and* automatically creates the patient record from the submitted profile (`fullName`, `email`, optional `dateOfBirth`/`gender`/`contactNumber`/`bloodGroup`) — no pre-existing patient ID is required. `POST /auth/register-doctor` creates a DOCTOR-role account in `PENDING` status (see *Doctor onboarding* above).
 * **Request validation** — a global `JwtAuthGlobalFilter` validates the JWT signature/expiry on every request except `/auth/**` and `/actuator/**`:
   * Missing/invalid/expired token → `401`
-  * Appointment **writes** (`POST/PUT/DELETE /api/appointments/**`) → `ADMIN` or `DOCTOR` only, else `403`
+  * Appointment **writes** (`POST/PUT/DELETE /api/appointments/**`) → `ADMIN` or `DOCTOR` only, else `403` — except **patient self-service**: a PATIENT-role user may `POST /api/appointments/book`, `PUT /api/appointments/{id}/reschedule` and `DELETE /api/appointments/{id}`; the appointment-service then enforces row-level ownership via the `pid` claim (patients can only ever book/reschedule/cancel their **own** appointments, and never create slots)
+  * **Admin management** (`/api/admin/**`) → `ADMIN` only, else `403`
   * PATIENT-role users may only access **their own** record (`GET/PUT /api/patients/{id}` matching the `pid` claim), else `403`
 * **Rate limiting** — Redis-backed `RequestRateLimiter`/`RedisRateLimiter` on every route, keyed by client IP (custom `KeyResolver`). Over-limit requests → `429`. Tune via `RATE_LIMIT_REPLENISH_RATE` / `RATE_LIMIT_BURST_CAPACITY`.
 * **Correlation IDs** — the gateway generates `X-Correlation-Id`, propagates it to downstream services (HTTP + Feign headers) and into RabbitMQ message headers (via the outbox), and includes it in every log line through the MDC.
@@ -123,6 +147,30 @@ curl -X POST http://localhost:8080/auth/login \
 # Use the returned token on all other endpoints
 curl http://localhost:8080/api/patients/1 \
   -H "Authorization: Bearer <token>"
+
+# Register as a doctor (account starts PENDING — admin must approve it)
+curl -X POST http://localhost:8080/auth/register-doctor \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "dr.maya",
+    "password": "password",
+    "fullName": "Dr. Maya Kapoor",
+    "email": "maya.kapoor@example.com",
+    "specialization": "Neurology",
+    "licenseNumber": "MED-2024-00123"
+  }'
+
+# Admin: list all doctor accounts (pending / approved / rejected)
+curl http://localhost:8080/api/admin/doctors \
+  -H "Authorization: Bearer <admin-token>"
+
+# Admin: approve a doctor (assigns doctor_id and unlocks login)
+curl -X POST http://localhost:8080/api/admin/doctors/<user-id>/approve \
+  -H "Authorization: Bearer <admin-token>"
+
+# Admin: reject a doctor (permanently blocks login)
+curl -X POST http://localhost:8080/api/admin/doctors/<user-id>/reject \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 ## API Endpoints
@@ -239,26 +287,56 @@ Example error response:
 
 ```
 microcare/
-├── pom.xml                          # Root Maven POM (multi-module)
-├── docker-compose.yml               # Infrastructure + all platform services
+├── backend/                         # All Java / Spring Boot services (Maven multi-module)
+│   ├── pom.xml                      # Root Maven POM (multi-module)
+│   ├── discovery-service/           # Eureka Service Registry
+│   ├── common-support/              # Shared correlation-ID utilities
+│   ├── api-gateway/                 # Spring Cloud Gateway + Spring Security/JWT + rate limiting
+│   ├── patient-service/             # Patient REST API
+│   ├── appointment-service/         # Appointment booking (Redisson lock + outbox)
+│   ├── billing-service/             # Invoice creation (RabbitMQ consumer)
+│   ├── notification-service/        # Notification log entries (RabbitMQ consumer)
+│   └── integration-test/            # Testcontainers full-system test (mvn verify)
+├── frontend/                        # React + Vite + Tailwind dashboard (served by nginx)
+│   ├── src/pages/                   # Login, Dashboard, Patients, Appointments, Invoices
+│   ├── src/components/              # Layout, toasts, modals, badges, icons
+│   ├── Dockerfile                   # Multi-stage: node build → nginx:alpine
+│   └── nginx.conf                   # Serves the SPA + proxies /api & /auth → gateway
+├── docker-compose.yml               # Infrastructure + platform services + frontend
 ├── init-scripts/                    # MySQL first-boot scripts (auth/users, databases)
-├── README.md
-├── discovery-service/               # Eureka Service Registry
-├── common-support/                  # Shared correlation-ID utilities
-├── api-gateway/                     # Spring Cloud Gateway + Spring Security/JWT + rate limiting
-├── patient-service/                 # Patient REST API
-├── appointment-service/             # Appointment booking (Redisson lock + outbox)
-├── billing-service/                 # Invoice creation (RabbitMQ consumer)
-├── notification-service/            # Notification log entries (RabbitMQ consumer)
-└── integration-test/                # Testcontainers full-system test (mvn verify)
+└── README.md
+```
+
+## Frontend (React + Vite + Tailwind)
+
+A polished single-page dashboard served on **http://localhost:3000** (nginx container).
+It talks to the backend through the same origin — nginx proxies `/api/*` and `/auth/*`
+to the API gateway, so no CORS is needed in the Docker setup.
+
+| Page          | Roles                       | What it does                                        |
+|---------------|-----------------------------|-----------------------------------------------------|
+| Login         | everyone                    | JWT sign-in (admin / doctor / patient)              |
+| Register      | everyone                    | Self-register as a **patient** or **doctor** (doctors wait for admin approval) |
+| Dashboard     | role-specific               | **Admin**: platform stats + pending doctor approvals · **Doctor**: personal schedule, slots & patients seen · **Patient**: personal care snapshot |
+| Patients      | ADMIN, DOCTOR               | Search, register and edit patient records           |
+| Doctors       | ADMIN                       | Review, approve and reject doctor applications      |
+| Appointments  | patients book their own, staff manage | Patients self-book, reschedule & cancel; staff book for any patient and create doctor slots |
+| Invoices      | all (view), staff (pay)     | Track and mark invoices as paid                     |
+
+**Local development** (hot reload):
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173 — proxies /api and /auth to localhost:8080
 ```
 
 ## Running the System Integration Test
 
 Requires Docker Desktop (started before running). The test boots every service
 against Testcontainers MySQL/Redis/RabbitMQ and verifies the full flow:
-register patient → login → security rules → doctor books appointment → invoice
-via outbox → notification log → audit log — all within a timeout.
+register patient → login → security rules → doctor creates slots + books → patient
+self-books → invoices via outbox → notification log → audit log — all within a timeout.
 
 ```bash
 mvn verify -pl integration-test
@@ -276,12 +354,12 @@ docker compose down
 docker compose down -v
 ```
 
-## Remaining Gaps / TODOs (before frontend development)
+## Remaining Gaps / TODOs
 
-1. **Role-scoped data access** — enforce *row-level* authorization inside services (not just the gateway): patients should only see their own appointments/invoices, doctors only their own slots/schedule.
+1. **Doctor-scoped row-level access** — doctors currently query the full schedule via `?doctorId=`; enforce at the service layer that a DOCTOR can only read/modify their own slots and appointments.
 2. **JWT secret management** — move `JWT_SECRET` to a secrets manager / vault; add token refresh flow and logout/revocation (e.g., Redis denylist).
 3. **HTTPS/TLS termination** and `X-Forwarded-For` trust config at the edge for real deployments.
-4. **Doctor slot management** — there is no endpoint to create/manage `doctor_slots` yet (test seeds them directly via SQL).
+4. **Doctor roster management** — editing doctor profiles (specialization, contact), deactivation, and slot templates; doctors are currently created via registration + approval only.
 5. **Notification delivery** — the notification-service only *logs* entries; add actual email/SMS dispatch (e.g., Spring Mail, SendGrid).
 6. **Password policy & account lifecycle** — lockouts, password reset, admin user management UI/API.
 7. **Audit log retention/purging** and a query/export endpoint for compliance.

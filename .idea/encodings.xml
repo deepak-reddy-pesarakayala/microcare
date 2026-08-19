@@ -5,10 +5,32 @@
     <file url="file://$PROJECT_DIR$/api-gateway/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/appointment-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/appointment-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/api-gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/api-gateway/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/appointment-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/appointment-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/billing-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/billing-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/common-support/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/common-support/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/discovery-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/discovery-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/init-scripts" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/integration-test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/notification-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/patient-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/backend/patient-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/billing-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/billing-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/common-support/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/common-support/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/discovery-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/discovery-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/init-scripts" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/integration-test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/notification-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patient-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patient-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
