@@ -11,7 +11,7 @@ services:
     container_name: microcare-mysql
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: microcare_patients
@@ -72,7 +72,9 @@ services:
   # =====================
 
   discovery-service:
-    build: ./discovery-service
+    build:
+      context: ./backend
+      dockerfile: discovery-service/Dockerfile
     container_name: microcare-discovery
     restart: unless-stopped
     ports:
@@ -87,7 +89,9 @@ services:
       - microcare-network
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: ./backend
+      dockerfile: api-gateway/Dockerfile
     container_name: microcare-api-gateway
     restart: unless-stopped
     ports:
@@ -117,7 +121,9 @@ services:
       - microcare-network
 
   patient-service:
-    build: ./patient-service
+    build:
+      context: ./backend
+      dockerfile: patient-service/Dockerfile
     container_name: microcare-patient-service
     restart: unless-stopped
     ports:
@@ -142,7 +148,9 @@ services:
       - microcare-network
 
   appointment-service:
-    build: ./appointment-service
+    build:
+      context: ./backend
+      dockerfile: appointment-service/Dockerfile
     container_name: microcare-appointment-service
     restart: unless-stopped
     ports:
@@ -173,7 +181,9 @@ services:
       - microcare-network
 
   billing-service:
-    build: ./billing-service
+    build:
+      context: ./backend
+      dockerfile: billing-service/Dockerfile
     container_name: microcare-billing-service
     restart: unless-stopped
     ports:
@@ -201,7 +211,9 @@ services:
       - microcare-network
 
   notification-service:
-    build: ./notification-service
+    build:
+      context: ./backend
+      dockerfile: notification-service/Dockerfile
     container_name: microcare-notification-service
     restart: unless-stopped
     ports:
@@ -225,6 +237,28 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+    networks:
+      - microcare-network
+
+  # =====================
+  # Frontend
+  # =====================
+
+  frontend:
+    build: ./frontend
+    container_name: microcare-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - microcare-network
 
